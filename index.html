@@ -3,98 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Legal Assistant</title>
+    <title>Nayaya - AI Legal Assistant</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Font - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f7f8fa; /* A slightly warmer off-white */
             color: #1f2937;
+            overflow-x: hidden;
         }
+
+        /* Subtle background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e4e7eb' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        
+        /* Animation keyframes */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Animation utility classes */
+        .animate-fadeInUp { animation: fadeInUp 0.7s ease-out forwards; }
+        .page-transition-out { animation: fadeOut 0.5s ease-in forwards; }
+        .page-transition-in { animation: fadeIn 0.7s 0.3s ease-out forwards; opacity: 0; }
+        
+        /* Staggered animation for feature cards */
+        .feature-card { opacity: 0; }
+        .feature-card:nth-child(1) { animation-delay: 0.2s; }
+        .feature-card:nth-child(2) { animation-delay: 0.4s; }
+        .feature-card:nth-child(3) { animation-delay: 0.6s; }
+
+        .prose h2 { margin-bottom: 0.5em; }
+        .prose ul { margin-top: 0.5em; }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4">
+<body class="flex flex-col min-h-screen">
 
-    <div class="max-w-3xl w-full bg-white p-8 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl">
-        <h1 class="text-3xl font-bold mb-4 text-center text-gray-800">AI Legal Assistant</h1>
-        <p class="text-gray-600 text-center mb-6">Enter your situation below to get legal guidance. The AI will act as a knowledgeable legal assistant specializing in Indian law and will provide informational context, not a definitive legal opinion.</p>
-
-        <!-- User Input Area -->
-        <div class="mb-6">
-            <textarea id="situation-input" rows="8" placeholder="I purchased a new laptop online from a major e-commerce website about three weeks ago. The laptop arrived with a damaged screen, which was not mentioned in the product description..." class="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"></textarea>
-        </div>
-
-        <!-- Action Button -->
-        <div class="flex justify-center mb-8">
-            <button id="get-advice-btn" class="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform transform hover:scale-105 active:scale-95">
-                Get Legal Advice
-            </button>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="flex justify-center items-center gap-2 text-blue-500 hidden">
-            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Fetching advice...</span>
-        </div>
-
-        <!-- Response Display Area -->
-        <div id="response-container" class="mt-8 p-6 bg-gray-100 rounded-lg border border-gray-200">
-            <h2 class="text-xl font-semibold mb-3 text-gray-700">Legal Guidance</h2>
-            <div id="advice-content" class="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                <!-- Advice will be displayed here -->
+    <div class="flex-grow flex items-center justify-center p-4 sm:p-6">
+        <!-- Landing Page Section -->
+        <main id="landing-page" class="w-full max-w-5xl mx-auto">
+            <div class="text-center">
+                <div class="inline-block bg-indigo-100 text-indigo-600 p-4 rounded-2xl mb-4 animate-fadeInUp" style="animation-delay: 0.1s;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-scale"><path d="M16 16.5l4-4-4-4M8 7.5l-4 4 4 4M12 21V3M21 7.5H3M21 16.5H3"/></svg>
+                </div>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-800 tracking-tight animate-fadeInUp" style="animation-delay: 0.2s;">
+                    Demystifying Indian Law with <span class="text-indigo-600">Nayaya</span>
+                </h1>
+                <p class="mt-4 max-w-2xl mx-auto text-base sm:text-lg text-gray-600 animate-fadeInUp" style="animation-delay: 0.3s;">
+                    Get clear, AI-powered informational guidance on your legal questions. Nayaya helps you understand the legal landscape, relevant acts, and potential next steps, all in simple terms.
+                </p>
+                <div class="mt-8 animate-fadeInUp" style="animation-delay: 0.4s;">
+                    <button id="get-started-btn" class="bg-indigo-600 text-white font-semibold py-3 px-8 text-base sm:py-4 sm:px-10 sm:text-lg rounded-xl shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 transition-all duration-300 transform hover:scale-105 active:scale-95">
+                        Get Started
+                    </button>
+                </div>
             </div>
-        </div>
+
+            <div class="mt-16 sm:mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                <div class="feature-card text-center p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 animate-fadeInUp transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                    <div class="flex justify-center items-center h-16 w-16 rounded-full bg-indigo-100 text-indigo-600 mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-3.38 19.46A10 10 0 0 0 12 22a10 10 0 0 0 3.38-2.54A10 10 0 0 0 12 2z"></path><path d="M12 12L9 22"></path><path d="M20.25 15.5H12"></path><path d="M12 12L3.75 15.5"></path><path d="M12 12l-2.7-3.9a1.6 1.6 0 0 1 .1-2.2 1.6 1.6 0 0 1 2.2-.1Z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mt-6">AI-Powered Guidance</h3>
+                    <p class="mt-2 text-gray-600">Leverage advanced AI to analyze your situation and provide relevant legal context based on Indian law.</p>
+                </div>
+                <div class="feature-card text-center p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 animate-fadeInUp transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                    <div class="flex justify-center items-center h-16 w-16 rounded-full bg-indigo-100 text-indigo-600 mx-auto">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12"cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mt-6">Focus on Indian Law</h3>
+                    <p class="mt-2 text-gray-600">Specialized insights into the Indian Constitution, Consumer Protection Act, Contract Act, and more.</p>
+                </div>
+                <div class="feature-card text-center p-6 sm:p-8 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 animate-fadeInUp transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                   <div class="flex justify-center items-center h-16 w-16 rounded-full bg-indigo-100 text-indigo-600 mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mt-6">Informational, Not Advice</h3>
+                    <p class="mt-2 text-gray-600">Use Nayaya as your first step to understand your options. Always consult a qualified lawyer for legal advice.</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- App Page Section -->
+        <main id="app-page" class="w-full max-w-4xl hidden">
+            <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-2xl border border-gray-200/50 relative">
+                <button id="back-to-home-btn" class="absolute top-4 left-4 text-gray-400 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-gray-100" title="Back to Home">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </button>
+                <div class="text-center mb-8">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Legal Guidance Assistant</h1>
+                    <p class="text-gray-500 mt-1">Describe your situation to receive informational context based on Indian Law.</p>
+                </div>
+                
+                <div class="mb-6">
+                    <textarea id="situation-input" rows="8" placeholder="For example: I purchased a new laptop online... it arrived with a damaged screen..." class="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 shadow-sm hover:shadow-md"></textarea>
+                </div>
+
+                <div class="flex justify-center mb-8">
+                    <button id="get-advice-btn" class="bg-indigo-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>Analyze Situation</span>
+                    </button>
+                </div>
+
+                <div id="response-section" class="hidden">
+                    <div id="loading-indicator" class="flex justify-center items-center gap-3 text-indigo-600 py-8 hidden">
+                        <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-lg font-medium">Analyzing your situation...</span>
+                    </div>
+                    <div id="response-container" class="mt-4 bg-gray-50 rounded-lg border border-gray-200/80 hidden">
+                        <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                             <h2 class="text-lg font-semibold text-gray-700">Guidance from Nayaya</h2>
+                             <button id="copy-btn" class="flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-600 font-medium transition-colors p-2 rounded-lg hover:bg-gray-100">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                 <span id="copy-btn-text">Copy</span>
+                            </button>
+                        </div>
+                        <div id="advice-content" class="p-6 text-gray-800 leading-relaxed prose max-w-none"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
+
+    <footer class="text-center p-4 text-gray-500 text-sm">
+        © 2025 Nayaya. All Rights Reserved. This is an AI-powered tool for informational purposes only and does not constitute legal advice.
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const landingPage = document.getElementById('landing-page');
+            const appPage = document.getElementById('app-page');
+            const getStartedBtn = document.getElementById('get-started-btn');
+            const backToHomeBtn = document.getElementById('back-to-home-btn');
             const adviceBtn = document.getElementById('get-advice-btn');
             const situationInput = document.getElementById('situation-input');
             const adviceContent = document.getElementById('advice-content');
             const loadingIndicator = document.getElementById('loading-indicator');
+            const responseSection = document.getElementById('response-section');
+            const responseContainer = document.getElementById('response-container');
+            const copyBtn = document.getElementById('copy-btn');
+            const copyBtnText = document.getElementById('copy-btn-text');
+
+            const switchPage = (from, to) => {
+                from.classList.add('page-transition-out');
+                from.addEventListener('animationend', () => {
+                    from.classList.add('hidden');
+                    from.classList.remove('page-transition-out');
+                    to.classList.remove('hidden');
+                    to.classList.add('page-transition-in');
+                }, { once: true });
+            };
+
+            getStartedBtn.addEventListener('click', () => switchPage(landingPage, appPage));
+            backToHomeBtn.addEventListener('click', () => switchPage(appPage, landingPage));
+            
+            copyBtn.addEventListener('click', () => {
+                const textToCopy = adviceContent.innerText;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    copyBtnText.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyBtnText.textContent = 'Copy';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    copyBtnText.textContent = 'Error';
+                });
+            });
 
             adviceBtn.addEventListener('click', async () => {
                 const situation = situationInput.value.trim();
                 if (!situation) {
-                    adviceContent.innerHTML = '<p class="text-red-500">Please describe your situation before clicking the button.</p>';
+                    responseSection.classList.remove('hidden');
+                    responseContainer.classList.remove('hidden');
+                    loadingIndicator.classList.add('hidden');
+                    adviceContent.innerHTML = '<p class="text-red-500 font-semibold">Please describe your situation in the text box above before requesting guidance.</p>';
                     return;
                 }
 
-                // Show loading state
-                adviceContent.textContent = '';
+                responseSection.classList.remove('hidden');
+                responseContainer.classList.add('hidden');
+                adviceContent.innerHTML = '';
                 loadingIndicator.classList.remove('hidden');
                 adviceBtn.disabled = true;
+                adviceBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-                const basePrompt = `I need legal advice regarding a personal issue. Please act as a knowledgeable legal assistant specializing in Indian law and the Indian Constitution. Do not provide a definitive legal opinion, but rather explain the relevant legal principles, key points to consider, and suggest the typical next steps. Explain the relevant legal context, including applicable Acts, Sections, and landmark court judgments, while also highlighting important considerations and potential challenges. Remember, this is for informational purposes only and is not a substitute for advice from a qualified lawyer. Here is my situation: `;
-                const fullPrompt = basePrompt + situation;
-                const encodedPrompt = encodeURIComponent(fullPrompt);
-                const apiUrl = `https://text.pollinations.ai/${encodedPrompt}`;
+                const systemPrompt = `You are "Nayaya," a knowledgeable and empathetic AI legal assistant specializing in Indian law and the Indian Constitution. Your purpose is to provide informational guidance, not definitive legal opinions. When a user describes their situation, you must:
+1.  Acknowledge their situation with empathy.
+2.  Explain the relevant legal principles and context in clear, simple terms.
+3.  Reference applicable Indian Acts and specific Sections where possible (e.g., Consumer Protection Act, 2019; Indian Contract Act, 1872).
+4.  Mention any relevant landmark court judgments if they are highly pertinent and illustrative.
+5.  Suggest typical, practical next steps the user could consider.
+6.  Highlight important considerations or potential challenges they might face.
+7.  Conclude with a clear disclaimer that your guidance is for informational purposes only and does not substitute for advice from a qualified lawyer.
+Structure your response for readability using headings (e.g., with ##) and bullet points.`;
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ parts: [{ text: `Here is my situation: ${situation}` }] }],
+                };
+                
                 try {
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`API returned status: ${response.status}`);
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate?.content?.parts?.[0]?.text) {
+                        const text = candidate.content.parts[0].text;
+                        adviceContent.innerHTML = marked.parse(text);
+                    } else {
+                        throw new Error("Invalid response structure from the API.");
                     }
-                    const data = await response.text();
-                    adviceContent.textContent = data;
                 } catch (error) {
-                    console.error('Fetch error:', error);
-                    adviceContent.innerHTML = `<p class="text-red-500">An error occurred while fetching advice. This is often due to a security policy preventing direct access to the API. Error: ${error.message}</p>`;
+                    console.error('API call error:', error);
+                    adviceContent.innerHTML = `<p class="text-red-500 font-semibold">We're sorry, an error occurred while fetching guidance. Please try again later.<br><br><span class="text-sm text-gray-500">Error: ${error.message}</span></p>`;
                 } finally {
-                    // Hide loading state and re-enable button
                     loadingIndicator.classList.add('hidden');
+                    responseContainer.classList.remove('hidden');
+                    responseContainer.style.animation = 'fadeIn 0.5s ease-out forwards';
+                    
                     adviceBtn.disabled = false;
+                    adviceBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             });
         });
     </script>
 </body>
 </html>
+
+
