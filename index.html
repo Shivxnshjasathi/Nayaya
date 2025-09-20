@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Legal Assistant</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-3xl w-full bg-white p-8 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl">
+        <h1 class="text-3xl font-bold mb-4 text-center text-gray-800">AI Legal Assistant</h1>
+        <p class="text-gray-600 text-center mb-6">Enter your situation below to get legal guidance. The AI will act as a knowledgeable legal assistant specializing in Indian law and will provide informational context, not a definitive legal opinion.</p>
+
+        <!-- User Input Area -->
+        <div class="mb-6">
+            <textarea id="situation-input" rows="8" placeholder="I purchased a new laptop online from a major e-commerce website about three weeks ago. The laptop arrived with a damaged screen, which was not mentioned in the product description..." class="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"></textarea>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex justify-center mb-8">
+            <button id="get-advice-btn" class="bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform transform hover:scale-105 active:scale-95">
+                Get Legal Advice
+            </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="flex justify-center items-center gap-2 text-blue-500 hidden">
+            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Fetching advice...</span>
+        </div>
+
+        <!-- Response Display Area -->
+        <div id="response-container" class="mt-8 p-6 bg-gray-100 rounded-lg border border-gray-200">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Legal Guidance</h2>
+            <div id="advice-content" class="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                <!-- Advice will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const adviceBtn = document.getElementById('get-advice-btn');
+            const situationInput = document.getElementById('situation-input');
+            const adviceContent = document.getElementById('advice-content');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            adviceBtn.addEventListener('click', async () => {
+                const situation = situationInput.value.trim();
+                if (!situation) {
+                    adviceContent.innerHTML = '<p class="text-red-500">Please describe your situation before clicking the button.</p>';
+                    return;
+                }
+
+                // Show loading state
+                adviceContent.textContent = '';
+                loadingIndicator.classList.remove('hidden');
+                adviceBtn.disabled = true;
+
+                const basePrompt = `I need legal advice regarding a personal issue. Please act as a knowledgeable legal assistant specializing in Indian law and the Indian Constitution. Do not provide a definitive legal opinion, but rather explain the relevant legal principles, key points to consider, and suggest the typical next steps. Explain the relevant legal context, including applicable Acts, Sections, and landmark court judgments, while also highlighting important considerations and potential challenges. Remember, this is for informational purposes only and is not a substitute for advice from a qualified lawyer. Here is my situation: `;
+                const fullPrompt = basePrompt + situation;
+                const encodedPrompt = encodeURIComponent(fullPrompt);
+                const apiUrl = `https://text.pollinations.ai/${encodedPrompt}`;
+
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`API returned status: ${response.status}`);
+                    }
+                    const data = await response.text();
+                    adviceContent.textContent = data;
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    adviceContent.innerHTML = `<p class="text-red-500">An error occurred while fetching advice. This is often due to a security policy preventing direct access to the API. Error: ${error.message}</p>`;
+                } finally {
+                    // Hide loading state and re-enable button
+                    loadingIndicator.classList.add('hidden');
+                    adviceBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
